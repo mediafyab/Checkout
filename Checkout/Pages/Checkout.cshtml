@@ -1,0 +1,135 @@
+﻿@page "{offerId:int}"
+@using Checkout.DataAccess
+@using Checkout.Models;
+@using Checkout.Pages;
+@using Microsoft.EntityFrameworkCore
+@inject DataContext context
+@{
+    Layout = "Shared/_Layout";
+    const int countryNotSelected = 0;
+    context.Database.EnsureCreated();
+
+    var offerId = Int32.Parse(RouteData.Values["offerId"].ToString());
+    var query = $@"
+            SELECT
+                p.ImageUrl as ImageUrl
+                ,ofr.Country as Country
+            FROM 
+                Offers ofr
+            INNER JOIN Product p
+                ON p.Id = ofr.ProductId
+            WHERE ofr.Id = {offerId}
+        ";
+
+    var checkoutDto = context.Database.SqlQueryRaw<CheckoutDto>(query).Single();
+}
+
+<header>
+    <h1>Provide your information:</h1>
+    
+</header>
+<form>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <div class="col-md-6">
+                    <label for="ddl_country">Country:</label>
+                    <select class="form-control" id="ddl_country" name="country">
+                        <option value="@countryNotSelected" selected>Select country</option>
+                        <option value="@((int)Country.Sweden)">@Country.Sweden.ToString()</option>
+                        <option value="@((int)Country.Norway)">@Country.Norway.ToString()</option>
+                        <option value="@((int)Country.Finland)">@Country.Finland.ToString()</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="address">Email:</label>
+                <input type="text" class="form-control" id="email" name="email" placeholder="Enter e-mail address">
+            </div>
+            <div class="row form-group">
+                <div class="col">
+                    <label for="firstName">First name:</label>
+                    <input type="text" class="form-control" id="firstName" name="firstName" placeholder="Enter first name">
+                </div>
+                <div class="col">
+                    <label for="lastName">Last name:</label>
+                    <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Enter last name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="address">Address:</label>
+                <input type="text" class="form-control" id="address" name="address" placeholder="Enter address">
+            </div>
+            <div class="row form-group">
+                <div class="col">
+                    <label for="zip">ZIP code:</label>
+                    <input type="text" class="form-control" id="zipCode" name="zipCode" placeholder="Enter ZIP code">
+                </div>
+                <div class="col">
+                    <label for="telefon">Telephone:</label>
+                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Enter telephone number">
+                </div>
+            </div> <br />
+            <button type="submit" class="btn btn-primary">Place order</button>
+        </div>
+        <div class="col-md-6">
+            <img src="@checkoutDto.ImageUrl" />
+        </div>
+    </div>
+    
+</form>
+
+@section Scripts
+{
+    <script>
+        const initialCountryState = parseInt('@countryNotSelected');
+    
+        const validate = () => {
+            const $countryDdl = $('#ddl_country');
+            const selectedCountry = $countryDdl.find(":checked").val();
+            const formIsInvalid = parseInt(selectedCountry) === initialCountryState;
+            
+            $('[type="submit"]').prop('disabled', formIsInvalid);
+            if (formIsInvalid) {
+                $countryDdl.addClass('border').addClass('border-danger');
+                return;
+            }
+
+            $countryDdl.removeClass('border').removeClass('border-danger');
+        }
+
+        const submitOrder = (e) => {
+
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                contentType: 'application/json',
+                url: 'https://dev-assignment.mediafy.com/api/Orders',
+                data: JSON.stringify({
+                    'OfferId': @offerId,
+                    'FirstName': $('#firstName').val(),
+                    'LastName': $('#lastName').val(),
+                    'Address': $('#address').val(),
+                    'Email': $('#email').val(),
+                    'ZipCode': $('#zipCode').val(),
+                    'Telephone': $('#phone').val(),
+                    'Country': parseInt($('#ddl_country').find(':checked').val())
+                }),
+                success: function(){
+                    alert('Thank you for your order!');
+                },
+                error: function (jqXHR, textStatus, errorThrown){
+                    alert('Oh no, we encountered an error!');
+                }
+            });
+        }
+
+        $(() => {
+            $('#ddl_country').on('change', validate);
+            validate();
+
+            $('form').on('submit', submitOrder);
+        })        
+    
+    </script>
+}  
